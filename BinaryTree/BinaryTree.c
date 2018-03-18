@@ -124,8 +124,6 @@ void inorder_recursive(node_t *node)
 void postorder_non_recursive(node_t *node)
 {
 	list_t *traverse_list = NULL;
-	list_t *print_list = NULL;
-	list_t *print_list_end = NULL;
 	list_t *tmp = NULL;
 
 	while (NULL != node)
@@ -139,35 +137,19 @@ void postorder_non_recursive(node_t *node)
 			node = node->left;
 		}
 
+		tmp = NULL;
 		while ((NULL != traverse_list) && 
 			((NULL == traverse_list->node->right) || 
-			 (print_list_end && print_list_end->node == traverse_list->node->right)))
+			 (tmp && tmp->node == traverse_list->node->right)))
 		{
 			tmp = traverse_list;
 			traverse_list = traverse_list->next;
-
-			if (NULL != print_list_end)
-			{
-				print_list_end->next = tmp;
-				print_list_end = tmp;
-			}
-			else
-			{
-				print_list = tmp;
-				print_list_end = tmp;
-			}
+			printf("%d\t", tmp->node->data);
+			free(tmp);
 		}
 		
 		if (NULL != traverse_list)
 			node = traverse_list->node->right;
-	}
-
-	while (NULL != print_list)
-	{
-		tmp = print_list;
-		print_list = print_list->next;
-		printf("%d\t", tmp->node->data);
-		free(tmp);
 	}
 }
 
