@@ -3,9 +3,9 @@
 
 typedef enum
 {
-	BINARY_TREE_OP_STATUS_PASS = 0,
-	BINARY_TREE_OP_STATUS_FAIL,
-	BINARY_TREE_INVALID,
+	BT_OP_STATUS_PASS = 0,
+	BT_OP_STATUS_FAIL,
+	BT_INVALID,
 } status_t;
 
 void *binary_tree_create();	

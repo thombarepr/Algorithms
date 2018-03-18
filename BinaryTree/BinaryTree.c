@@ -24,6 +24,27 @@ typedef struct list
 } list_t;
 
 #define BINARY_TREE_ID 	(0x5A6B)
+ 
+/* Macros for CHECK on binary tree handler recived from user
+*  Args - 1. Handler recived from user
+*         2. Name for binary_tree_t pointer, the user pointer will be typecasted to
+*	  3. status_t return variable name. User can chose to modify it between BEGIN
+*	     and END and use it as return value.
+*  Precaution - This macro lock the mutex, so following must be avoided
+*  1. Function return allowed between BT_CHECK_BEGIN and BT_CHECK_END 
+*  2. Attempt to lock mutex between BT_CHECK_BEGIN and BT_CHECK_END
+*/
+#define BT_CHECK_BEGIN(handle, bt, ret);	\
+	binary_tree_t *bt = (binary_tree_t *)handle; \
+	status_t ret = BT_INVALID;	\
+	if (NULL != bt && BINARY_TREE_ID == bt->magic) \
+	{ \
+		pthread_mutex_lock(&bt->mutex); \
+		ret = BT_OP_STATUS_PASS; \
+
+#define BT_CHECK_END(bt);	\
+		pthread_mutex_unlock(&bt->mutex); \
+	}
 
 void *binary_tree_create(void)
 {
@@ -58,13 +79,16 @@ void preorder_non_recursive(node_t *node)
 		{
 			if (NULL != list->node->right)
 			{
-				list_t *tmp = list;
+				tmp = list;
 				node = list->node->right;
 				list = list->next;
 				free(tmp);
 				break;
 			}
+
+			tmp = list;
 			list = list->next;
+			free(tmp);
 		}
 	}
 }
@@ -100,13 +124,16 @@ void inorder_non_recursive(node_t *node)
 			printf("%d\t", list->node->data);
 			if (NULL != list->node->right)
 			{
-				list_t *tmp = list;
+				tmp = list;
 				node = list->node->right;
 				list = list->next;
 				free(tmp);
 				break;
 			}
+
+			tmp = list;
 			list = list->next;
+			free(tmp);
 		}
 	}
 }
@@ -165,50 +192,38 @@ void postorder_recursive(node_t *node)
 
 void binary_tree_preorder_traverse(void *arg)
 {
-	binary_tree_t *bt = (binary_tree_t *)arg;
-	if (NULL != bt && BINARY_TREE_ID == bt->magic)
-	{
-		pthread_mutex_lock(&bt->mutex);
-		printf("Recursive - \n");
-		preorder_recursive(bt->root);
-		printf("\n");
-		printf("Non Recursive - \n");
-		preorder_non_recursive(bt->root);
-		printf("\n");
-		pthread_mutex_unlock(&bt->mutex);
-	}
+	BT_CHECK_BEGIN(arg, bt, ret);
+	printf("Recursive - \n");
+	preorder_recursive(bt->root);
+	printf("\n");
+	printf("Non Recursive - \n");
+	preorder_non_recursive(bt->root);
+	printf("\n");
+	BT_CHECK_END(bt);
 }
 
 void binary_tree_inorder_traverse(void *arg)
 {
-	binary_tree_t *bt = (binary_tree_t *)arg;
-	if (NULL != bt && BINARY_TREE_ID == bt->magic)
-	{
-		pthread_mutex_lock(&bt->mutex);
-		printf("Recursive - \n");
-		inorder_recursive(bt->root);
-		printf("\n");
-		printf("Non Recursive - \n");
-		inorder_non_recursive(bt->root);
-		printf("\n");
-		pthread_mutex_unlock(&bt->mutex);
-	}
+	BT_CHECK_BEGIN(arg, bt, ret);
+	printf("Recursive - \n");
+	inorder_recursive(bt->root);
+	printf("\n");
+	printf("Non Recursive - \n");
+	inorder_non_recursive(bt->root);
+	printf("\n");
+	BT_CHECK_END(bt);
 }
 
 void binary_tree_postorder_traverse(void *handle)
 {
-	binary_tree_t *bt = (binary_tree_t *)handle;
-	if (NULL != bt && BINARY_TREE_ID == bt->magic)
-	{
-		pthread_mutex_lock(&bt->mutex);
-		printf("Recursive - \n");
-		postorder_recursive(bt->root);
-		printf("\n");
-		printf("Non Recursive - \n");
-		postorder_non_recursive(bt->root);
-		printf("\n");
-		pthread_mutex_unlock(&bt->mutex);
-	}
+	BT_CHECK_BEGIN(handle, bt, ret);
+	printf("Recursive - \n");
+	postorder_recursive(bt->root);
+	printf("\n");
+	printf("Non Recursive - \n");
+	postorder_non_recursive(bt->root);
+	printf("\n");
+	BT_CHECK_END(bt);
 }
 
 void binary_search_tree_add(node_t *root, node_t *node)
@@ -234,28 +249,22 @@ void binary_search_tree_add(node_t *root, node_t *node)
  
 status_t binary_tree_add(void *handle, int data, void **out)
 {
-	binary_tree_t *bt = (binary_tree_t *)handle;
-	status_t ret = BINARY_TREE_INVALID;
-
-	pthread_mutex_lock(&bt->mutex);
-	if (NULL != bt && BINARY_TREE_ID == bt->magic)
+	BT_CHECK_BEGIN(handle, bt, ret);
+	node_t *node = calloc(sizeof(node), 1);
+	if (node)
 	{
-		node_t *node = calloc(sizeof(node), 1);
-		if (node)
-		{
-			ret = BINARY_TREE_OP_STATUS_PASS;
-			node->data = data;
-			if (NULL != bt->root)
-				binary_search_tree_add(bt->root, node);
-			else
-				bt->root = node;
-			*out = node;
-		}
+		ret = BT_OP_STATUS_PASS;
+		node->data = data;
+		if (NULL != bt->root)
+			binary_search_tree_add(bt->root, node);
 		else
-		{
-			ret = BINARY_TREE_OP_STATUS_FAIL;
-		}
+			bt->root = node;
+		*out = node;
 	}
-	pthread_mutex_unlock(&bt->mutex);
+	else
+	{
+		ret = BT_OP_STATUS_FAIL;
+	}
+	BT_CHECK_END(bt);
 	return ret;
 }
